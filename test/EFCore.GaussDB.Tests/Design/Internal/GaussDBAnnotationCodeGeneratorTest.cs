@@ -5,6 +5,8 @@ using HuaweiCloud.EntityFrameworkCore.GaussDB.Metadata.Conventions;
 using HuaweiCloud.EntityFrameworkCore.GaussDB.Metadata.Internal;
 using HuaweiCloud.EntityFrameworkCore.GaussDB.Storage.Internal;
 
+#pragma warning disable CS0612
+
 namespace HuaweiCloud.EntityFrameworkCore.GaussDB.Design.Internal;
 
 public class GaussDBAnnotationCodeGeneratorTest
@@ -410,3 +412,5 @@ public class GaussDBAnnotationCodeGeneratorTest
                     new GaussDBSqlGenerationHelper(new RelationalSqlGenerationHelperDependencies()),
                     new GaussDBSingletonOptions())));
 }
+
+#pragma warning restore CS0612

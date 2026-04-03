@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.NetworkInformation;
 
 // ReSharper disable ConvertToConstant.Local
+#pragma warning disable CS0612, CS0618
 
 namespace Microsoft.EntityFrameworkCore.Query.Translations;
 
@@ -1481,6 +1482,7 @@ FROM "NetTestEntities" AS n
         /// <summary>
         ///     The network address.
         /// </summary>
+        [Obsolete("GaussDBCidr is obsolete, replaced by .NET IPNetwork")]
         public GaussDBCidr Cidr { get; set; }
 
         /// <summary>
@@ -1557,8 +1559,10 @@ FROM "NetTestEntities" AS n
             }
 
             await context.SaveChangesAsync();
-        }
     }
+}
+
+#pragma warning restore CS0612, CS0618
 
     #endregion
 

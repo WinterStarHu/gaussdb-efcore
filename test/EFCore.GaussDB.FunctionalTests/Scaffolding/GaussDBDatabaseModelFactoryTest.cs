@@ -2134,6 +2134,7 @@ CREATE TABLE column_types (
                 var options = new GaussDBSingletonOptions();
                 options.Initialize(new DbContextOptionsBuilder().Options);
 
+                #pragma warning disable CS0612
                 var typeMappingSource = new GaussDBTypeMappingSource(
                     new TypeMappingSourceDependencies(
                         new ValueConverterSelector(new ValueConverterSelectorDependencies()),
@@ -2143,6 +2144,7 @@ CREATE TABLE column_types (
                     new RelationalTypeMappingSourceDependencies([]),
                     new GaussDBSqlGenerationHelper(new RelationalSqlGenerationHelperDependencies()),
                     options);
+                #pragma warning restore CS0612
 
                 foreach (var column in dbModel.Tables.Single().Columns)
                 {

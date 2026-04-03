@@ -6,6 +6,8 @@ using HuaweiCloud.EntityFrameworkCore.GaussDB.Storage.Internal;
 using HuaweiCloud.EntityFrameworkCore.GaussDB.Storage.Internal.Mapping;
 using HuaweiCloud.EntityFrameworkCore.GaussDB.TestUtilities;
 
+#pragma warning disable CS0612
+
 namespace HuaweiCloud.EntityFrameworkCore.GaussDB.Storage;
 
 public class GaussDBTypeMappingSourceTest
@@ -407,3 +409,5 @@ public class GaussDBTypeMappingSourceTest
 
     #endregion Support
 }
+
+#pragma warning restore CS0612

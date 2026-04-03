@@ -7,6 +7,8 @@ using HuaweiCloud.EntityFrameworkCore.GaussDB.Storage.Internal;
 using HuaweiCloud.EntityFrameworkCore.GaussDB.TestUtilities;
 using HuaweiCloud.EntityFrameworkCore.GaussDB.Update.Internal;
 
+#pragma warning disable CS0612
+
 namespace HuaweiCloud.EntityFrameworkCore.GaussDB.Update;
 
 public class GaussDBModificationCommandBatchFactoryTest
@@ -94,3 +96,5 @@ public class GaussDBModificationCommandBatchFactoryTest
         => new ModificationCommandFactory().CreateNonTrackedModificationCommand(
             new NonTrackedModificationCommandParameters(name, schema, sensitiveLoggingEnabled));
 }
+
+#pragma warning restore CS0612

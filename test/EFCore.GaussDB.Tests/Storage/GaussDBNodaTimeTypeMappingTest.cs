@@ -9,6 +9,8 @@ using HuaweiCloud.EntityFrameworkCore.GaussDB.Internal;
 using HuaweiCloud.EntityFrameworkCore.GaussDB.Storage.Internal;
 using HuaweiCloud.EntityFrameworkCore.GaussDB.Storage.Internal.Mapping;
 
+#pragma warning disable CS0612
+
 namespace HuaweiCloud.EntityFrameworkCore.GaussDB.Storage;
 
 public class GaussDBNodaTimeTypeMappingTest
@@ -100,7 +102,7 @@ public class GaussDBNodaTimeTypeMappingTest
     [Fact]
     public void GenerateSqlLiteral_returns_tsrange_literal()
     {
-        var mapping = (GaussDBCidrTypeMapping)GetMapping(typeof(GaussDBRange<LocalDateTime>));
+        var mapping = (GaussDBRangeTypeMapping)GetMapping(typeof(GaussDBRange<LocalDateTime>));
         Assert.Equal("tsrange", mapping.StoreType);
         Assert.Equal("timestamp without time zone", mapping.SubtypeMapping.StoreType);
 
@@ -362,7 +364,7 @@ public class GaussDBNodaTimeTypeMappingTest
     [Fact]
     public void GenerateSqlLiteral_returns_tstzrange_Instant_literal()
     {
-        var mapping = (GaussDBCidrTypeMapping)GetMapping(typeof(GaussDBRange<Instant>));
+        var mapping = (GaussDBRangeTypeMapping)GetMapping(typeof(GaussDBRange<Instant>));
         Assert.Equal("tstzrange", mapping.StoreType);
         Assert.Equal("timestamp with time zone", mapping.SubtypeMapping.StoreType);
 
@@ -375,7 +377,7 @@ public class GaussDBNodaTimeTypeMappingTest
     [Fact]
     public void GenerateSqlLiteral_returns_tstzrange_ZonedDateTime_literal()
     {
-        var mapping = (GaussDBCidrTypeMapping)GetMapping(typeof(GaussDBRange<ZonedDateTime>));
+        var mapping = (GaussDBRangeTypeMapping)GetMapping(typeof(GaussDBRange<ZonedDateTime>));
         Assert.Equal("tstzrange", mapping.StoreType);
         Assert.Equal("timestamp with time zone", mapping.SubtypeMapping.StoreType);
 
@@ -388,7 +390,7 @@ public class GaussDBNodaTimeTypeMappingTest
     [Fact]
     public void GenerateSqlLiteral_returns_tstzrange_OffsetDateTime_literal()
     {
-        var mapping = (GaussDBCidrTypeMapping)GetMapping(typeof(GaussDBRange<OffsetDateTime>));
+        var mapping = (GaussDBRangeTypeMapping)GetMapping(typeof(GaussDBRange<OffsetDateTime>));
         Assert.Equal("tstzrange", mapping.StoreType);
         Assert.Equal("timestamp with time zone", mapping.SubtypeMapping.StoreType);
 
@@ -567,7 +569,7 @@ public class GaussDBNodaTimeTypeMappingTest
     [Fact]
     public void GenerateSqlLiteral_returns_daterange_LocalDate_literal()
     {
-        var mapping = (GaussDBCidrTypeMapping)GetMapping(typeof(GaussDBRange<LocalDate>));
+        var mapping = (GaussDBRangeTypeMapping)GetMapping(typeof(GaussDBRange<LocalDate>));
         var value = new GaussDBRange<LocalDate>(new LocalDate(2020, 1, 1), new LocalDate(2020, 1, 2));
         Assert.Equal(@"'[2020-01-01,2020-01-02]'::daterange", mapping.GenerateSqlLiteral(value));
     }
@@ -865,3 +867,5 @@ public class GaussDBNodaTimeTypeMappingTest
 
     #endregion Support
 }
+
+#pragma warning restore CS0612

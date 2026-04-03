@@ -16,9 +16,9 @@ public class DateTimeTranslationsGaussDBTest : DateTimeTranslationsTestBase<Basi
         Fixture.TestSqlLoggerFactory.SetTestOutputHelper(testOutputHelper);
     }
 
-    public override async Task Now(bool async)
+    public override async Task Now()
     {
-        await base.Now(async);
+        await base.Now();
 
         AssertSql(
             """
@@ -30,14 +30,12 @@ WHERE now()::timestamp <> @myDatetime
 """);
     }
 
-    public override async Task UtcNow(bool async)
+    public override async Task UtcNow()
     {
         // Overriding to set Kind=Utc for timestamptz
         var myDatetime = DateTime.SpecifyKind(new DateTime(2015, 4, 10), DateTimeKind.Utc);
 
-        await AssertQuery(
-            async,
-            ss => ss.Set<BasicTypesEntity>().Where(c => DateTime.UtcNow != myDatetime));
+        await AssertQuery(ss => ss.Set<BasicTypesEntity>().Where(c => DateTime.UtcNow != myDatetime));
 
         AssertSql(
             """
@@ -51,17 +49,15 @@ WHERE now() <> @myDatetime
 
     // DateTime.Today returns a Local DateTime, which can't be compared with timestamptz
     // (see TemporalTranslationsGaussDBTimestampWithoutTimeZoneTest for a working version of this test)
-    public override Task Today(bool async)
-        => Assert.ThrowsAsync<NotSupportedException>(() => base.Today(async));
+    public override Task Today()
+        => Assert.ThrowsAsync<NotSupportedException>(() => base.Today());
 
-    public override async Task Date(bool async)
+    public override async Task Date()
     {
         // Overriding to set Kind=Utc for timestamptz
         var myDatetime = DateTime.SpecifyKind(new DateTime(1998, 5, 4), DateTimeKind.Utc);
 
-        await AssertQuery(
-            async,
-            ss => ss.Set<BasicTypesEntity>().Where(o => o.DateTime.Date == myDatetime));
+        await AssertQuery(ss => ss.Set<BasicTypesEntity>().Where(o => o.DateTime.Date == myDatetime));
 
         AssertSql(
             """
@@ -73,9 +69,9 @@ WHERE date_trunc('day', b."DateTime", 'UTC') = @myDatetime
 """);
     }
 
-    public override async Task AddYear(bool async)
+    public override async Task AddYear()
     {
-        await base.AddYear(async);
+        await base.AddYear();
 
         AssertSql(
             """
@@ -85,9 +81,9 @@ WHERE date_part('year', (b."DateTime" + INTERVAL '1 years') AT TIME ZONE 'UTC'):
 """);
     }
 
-    public override async Task Year(bool async)
+    public override async Task Year()
     {
-        await base.Year(async);
+        await base.Year();
 
         AssertSql(
             """
@@ -97,9 +93,9 @@ WHERE date_part('year', b."DateTime" AT TIME ZONE 'UTC')::int = 1998
 """);
     }
 
-    public override async Task Month(bool async)
+    public override async Task Month()
     {
-        await base.Month(async);
+        await base.Month();
 
         AssertSql(
             """
@@ -109,9 +105,9 @@ WHERE date_part('month', b."DateTime" AT TIME ZONE 'UTC')::int = 5
 """);
     }
 
-    public override async Task DayOfYear(bool async)
+    public override async Task DayOfYear()
     {
-        await base.DayOfYear(async);
+        await base.DayOfYear();
 
         AssertSql(
             """
@@ -121,9 +117,9 @@ WHERE date_part('doy', b."DateTime" AT TIME ZONE 'UTC')::int = 124
 """);
     }
 
-    public override async Task Day(bool async)
+    public override async Task Day()
     {
-        await base.Day(async);
+        await base.Day();
 
         AssertSql(
             """
@@ -133,9 +129,9 @@ WHERE date_part('day', b."DateTime" AT TIME ZONE 'UTC')::int = 4
 """);
     }
 
-    public override async Task Hour(bool async)
+    public override async Task Hour()
     {
-        await base.Hour(async);
+        await base.Hour();
 
         AssertSql(
             """
@@ -145,9 +141,9 @@ WHERE date_part('hour', b."DateTime" AT TIME ZONE 'UTC')::int = 15
 """);
     }
 
-    public override async Task Minute(bool async)
+    public override async Task Minute()
     {
-        await base.Minute(async);
+        await base.Minute();
 
         AssertSql(
             """
@@ -157,9 +153,9 @@ WHERE date_part('minute', b."DateTime" AT TIME ZONE 'UTC')::int = 30
 """);
     }
 
-    public override async Task Second(bool async)
+    public override async Task Second()
     {
-        await base.Second(async);
+        await base.Second();
 
         AssertSql(
             """
@@ -170,12 +166,12 @@ WHERE date_part('second', b."DateTime" AT TIME ZONE 'UTC')::int = 10
     }
 
     // SQL translation not implemented, too annoying
-    public override Task Millisecond(bool async)
-        => AssertTranslationFailed(() => base.Millisecond(async));
+    public override Task Millisecond()
+        => AssertTranslationFailed(() => base.Millisecond());
 
-    public override async Task TimeOfDay(bool async)
+    public override async Task TimeOfDay()
     {
-        await base.TimeOfDay(async);
+        await base.TimeOfDay();
 
         AssertSql(
             """
@@ -185,14 +181,12 @@ WHERE CAST(b."DateTime" AT TIME ZONE 'UTC' AS time) = TIME '00:00:00'
 """);
     }
 
-    public override async Task subtract_and_TotalDays(bool async)
+    public override async Task subtract_and_TotalDays()
     {
         // Overriding to set Kind=Utc for timestamptz
         var date = DateTime.SpecifyKind(new DateTime(1997, 1, 1), DateTimeKind.Utc);
 
-        await AssertQuery(
-            async,
-            ss => ss.Set<BasicTypesEntity>().Where(o => (o.DateTime - date).TotalDays > 365));
+        await AssertQuery(ss => ss.Set<BasicTypesEntity>().Where(o => (o.DateTime - date).TotalDays > 365));
 
         AssertSql(
             """
@@ -206,20 +200,18 @@ WHERE date_part('epoch', b."DateTime" - @date) / 86400.0 > 365.0
 
     // DateTime.Parse() returns either a Local or Unspecified DateTime, which can't be compared with timestamptz
     // (see TemporalTranslationsGaussDBTimestampWithoutTimeZoneTest for a working version of this test)
-    public override Task Parse_with_constant(bool async)
-        => Assert.ThrowsAsync<ArgumentException>(() => base.Parse_with_constant(async));
+    public override Task Parse_with_constant()
+        => Assert.ThrowsAsync<ArgumentException>(() => base.Parse_with_constant());
 
     // DateTime.Parse() returns either a Local or Unspecified DateTime, which can't be compared with timestamptz
     // (see TemporalTranslationsGaussDBTimestampWithoutTimeZoneTest for a working version of this test)
-    public override Task Parse_with_parameter(bool async)
-        => Assert.ThrowsAsync<ArgumentException>(() => base.Parse_with_parameter(async));
+    public override Task Parse_with_parameter()
+        => Assert.ThrowsAsync<ArgumentException>(() => base.Parse_with_parameter());
 
-    public override async Task New_with_constant(bool async)
+    public override async Task New_with_constant()
     {
         // Overriding to set Kind=Utc for timestamptz
-        await AssertQuery(
-            async,
-            ss => ss.Set<BasicTypesEntity>().Where(o => o.DateTime == new DateTime(1998, 5, 4, 15, 30, 10, DateTimeKind.Utc)));
+        await AssertQuery(ss => ss.Set<BasicTypesEntity>().Where(o => o.DateTime == new DateTime(1998, 5, 4, 15, 30, 10, DateTimeKind.Utc)));
 
         AssertSql(
             """
@@ -229,7 +221,7 @@ WHERE b."DateTime" = TIMESTAMPTZ '1998-05-04T15:30:10Z'
 """);
     }
 
-    public override async Task New_with_parameters(bool async)
+    public override async Task New_with_parameters()
     {
         // Overriding to set Kind=Utc for timestamptz
         var year = 1998;
@@ -237,9 +229,7 @@ WHERE b."DateTime" = TIMESTAMPTZ '1998-05-04T15:30:10Z'
         var date = 4;
         var hour = 15;
 
-        await AssertQuery(
-            async,
-            ss => ss.Set<BasicTypesEntity>().Where(o => o.DateTime == new DateTime(year, month, date, hour, 30, 10, DateTimeKind.Utc)));
+        await AssertQuery(ss => ss.Set<BasicTypesEntity>().Where(o => o.DateTime == new DateTime(year, month, date, hour, 30, 10, DateTimeKind.Utc)));
 
         AssertSql(
             """

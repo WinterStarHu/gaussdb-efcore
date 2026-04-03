@@ -10,6 +10,8 @@ using HuaweiCloud.EntityFrameworkCore.GaussDB.Storage.Internal;
 using HuaweiCloud.EntityFrameworkCore.GaussDB.TestUtilities;
 using HuaweiCloud.EntityFrameworkCore.GaussDB.TestUtilities.FakeProvider;
 
+#pragma warning disable CS0612
+
 namespace HuaweiCloud.EntityFrameworkCore.GaussDB;
 
 #nullable enable
@@ -453,3 +455,5 @@ public class GaussDBRelationalConnectionTest
         Sad
     }
 }
+
+#pragma warning restore CS0612

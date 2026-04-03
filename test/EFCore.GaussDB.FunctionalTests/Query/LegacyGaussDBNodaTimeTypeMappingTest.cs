@@ -48,7 +48,7 @@ namespace Microsoft.EntityFrameworkCore.Query
         [Fact]
         public void GenerateSqlLiteral_returns_instant_range_in_legacy_mode()
         {
-            var mapping = (GaussDBCidrTypeMapping)GetMapping(typeof(GaussDBRange<Instant>))!;
+            var mapping = (GaussDBRangeTypeMapping)GetMapping(typeof(GaussDBRange<Instant>))!;
             Assert.Equal("tsrange", mapping.StoreType);
             Assert.Equal("timestamp without time zone", mapping.SubtypeMapping.StoreType);
 
@@ -60,6 +60,7 @@ namespace Microsoft.EntityFrameworkCore.Query
 
         #region Support
 
+        #pragma warning disable CS0612
         private static readonly GaussDBTypeMappingSource Mapper = new(
             new TypeMappingSourceDependencies(
                 new ValueConverterSelector(new ValueConverterSelectorDependencies()),
@@ -73,6 +74,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             new GaussDBSqlGenerationHelper(new RelationalSqlGenerationHelperDependencies()),
             new GaussDBSingletonOptions()
         );
+        #pragma warning restore CS0612
 
         private static RelationalTypeMapping? GetMapping(string storeType)
             => Mapper.FindMapping(storeType);

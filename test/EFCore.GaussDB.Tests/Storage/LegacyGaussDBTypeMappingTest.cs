@@ -4,6 +4,8 @@ using Microsoft.EntityFrameworkCore.Storage.Json;
 using HuaweiCloud.EntityFrameworkCore.GaussDB.Internal;
 using HuaweiCloud.EntityFrameworkCore.GaussDB.Storage.Internal;
 
+#pragma warning disable CS0612
+
 namespace HuaweiCloud.EntityFrameworkCore.GaussDB.Storage;
 
 [Collection("LegacyDateTimeTest")]
@@ -77,5 +79,7 @@ public class LegacyGaussDBTypeMappingTest : IClassFixture<LegacyGaussDBTypeMappi
 
 [CollectionDefinition("LegacyDateTimeTest", DisableParallelization = true)]
 public class EventSourceTestCollection;
+
+#pragma warning restore CS0612
 
 #endif
