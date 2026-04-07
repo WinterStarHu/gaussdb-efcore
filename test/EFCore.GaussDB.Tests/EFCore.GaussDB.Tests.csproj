@@ -4,6 +4,7 @@
     <AssemblyName>HuaweiCloud.EntityFrameworkCore.GaussDB.Tests</AssemblyName>
     <RootNamespace>HuaweiCloud.EntityFrameworkCore.GaussDB</RootNamespace>
     <Nullable>disable</Nullable>
+    <NoWarn>$(NoWarn);0612;0618</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

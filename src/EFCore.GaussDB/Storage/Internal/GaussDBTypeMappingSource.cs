@@ -327,7 +327,7 @@ public class GaussDBTypeMappingSource : RelationalTypeMappingSource
             { typeof(PhysicalAddress), _macaddr },
             { typeof(IPAddress), _inetAsIPAddress },
             { typeof(GaussDBInet), _inetAsGaussDBInet },
-            { typeof(Metadata.GaussDBRange), _cidr },
+            { typeof(GaussDBCidr), _cidr },
             { typeof(BitArray), _varbit },
             { typeof(ImmutableDictionary<string, string>), _immutableHstore },
             { typeof(Dictionary<string, string>), _hstore },
@@ -600,21 +600,21 @@ public class GaussDBTypeMappingSource : RelationalTypeMappingSource
 
                 // TODO: This needs to move to the NodaTime plugin, but there's no FindCollectionMapping extension yet for plugins
                 if (relationalElementMapping.GetType() is
-                    { Name: "IntervalRangeMapping", Namespace: "GaussDB.EntityFrameworkCore.PostgreSQL.Storage.Internal" } type1)
+                    { Name: "IntervalRangeMapping", Namespace: "HuaweiCloud.EntityFrameworkCore.GaussDB.Storage.Internal" } type1)
                 {
                     return (RelationalTypeMapping)Activator.CreateInstance(
                         type1.Assembly.GetType(
-                            "GaussDB.EntityFrameworkCore.PostgreSQL.Storage.Internal.IntervalMultirangeMapping")!,
+                            "HuaweiCloud.EntityFrameworkCore.GaussDB.Storage.Internal.IntervalMultirangeMapping")!,
                         modelType,
                         relationalElementMapping)!;
                 }
 
                 if (relationalElementMapping.GetType() is
-                    { Name: "DateIntervalRangeMapping", Namespace: "GaussDB.EntityFrameworkCore.PostgreSQL.Storage.Internal" } type2)
+                    { Name: "DateIntervalRangeMapping", Namespace: "HuaweiCloud.EntityFrameworkCore.GaussDB.Storage.Internal" } type2)
                 {
                     return (RelationalTypeMapping)Activator.CreateInstance(
                         type2.Assembly.GetType(
-                            "GaussDB.EntityFrameworkCore.PostgreSQL.Storage.Internal.DateIntervalMultirangeMapping")!,
+                            "HuaweiCloud.EntityFrameworkCore.GaussDB.Storage.Internal.DateIntervalMultirangeMapping")!,
                         modelType,
                         relationalElementMapping)!;
                 }
@@ -687,21 +687,21 @@ public class GaussDBTypeMappingSource : RelationalTypeMappingSource
 
             // TODO: This needs to move to the NodaTime plugin, but there's no FindCollectionMapping extension yet for plugins
             if (relationalElementMapping?.GetType() is
-                { Name: "IntervalRangeMapping", Namespace: "GaussDB.EntityFrameworkCore.PostgreSQL.Storage.Internal" } type1)
+                { Name: "IntervalRangeMapping", Namespace: "HuaweiCloud.EntityFrameworkCore.GaussDB.Storage.Internal" } type1)
             {
                 return (RelationalTypeMapping)Activator.CreateInstance(
                     type1.Assembly.GetType(
-                        "GaussDB.EntityFrameworkCore.PostgreSQL.Storage.Internal.IntervalMultirangeMapping")!,
+                        "HuaweiCloud.EntityFrameworkCore.GaussDB.Storage.Internal.IntervalMultirangeMapping")!,
                     modelType ?? relationalElementMapping.ClrType.MakeArrayType(),
                     relationalElementMapping)!;
             }
 
             if (relationalElementMapping?.GetType() is
-                { Name: "DateIntervalRangeMapping", Namespace: "GaussDB.EntityFrameworkCore.PostgreSQL.Storage.Internal" } type2)
+                { Name: "DateIntervalRangeMapping", Namespace: "HuaweiCloud.EntityFrameworkCore.GaussDB.Storage.Internal" } type2)
             {
                 return (RelationalTypeMapping)Activator.CreateInstance(
                     type2.Assembly.GetType(
-                        "GaussDB.EntityFrameworkCore.PostgreSQL.Storage.Internal.DateIntervalMultirangeMapping")!,
+                        "HuaweiCloud.EntityFrameworkCore.GaussDB.Storage.Internal.DateIntervalMultirangeMapping")!,
                     modelType ?? relationalElementMapping.ClrType.MakeArrayType(),
                     relationalElementMapping)!;
             }
