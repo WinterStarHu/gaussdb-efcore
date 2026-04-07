@@ -1481,6 +1481,7 @@ FROM "NetTestEntities" AS n
         /// <summary>
         ///     The network address.
         /// </summary>
+        [Obsolete("GaussDBCidr is obsolete, replaced by .NET IPNetwork")]
         public GaussDBCidr Cidr { get; set; }
 
         /// <summary>

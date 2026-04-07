@@ -7,7 +7,7 @@ public class AdHocMiscellaneousQueryGaussDBTest(NonSharedFixture fixture) : AdHo
     protected override ITestStoreFactory TestStoreFactory
         => GaussDBTestStoreFactory.Instance;
 
-    protected override DbContextOptionsBuilder SetParameterizedCollectionMode(DbContextOptionsBuilder optionsBuilder, ParameterizedCollectionMode parameterizedCollectionMode)
+    protected override DbContextOptionsBuilder SetParameterizedCollectionMode(DbContextOptionsBuilder optionsBuilder, ParameterTranslationMode parameterizedCollectionMode)
     {
         new GaussDBDbContextOptionsBuilder(optionsBuilder).UseParameterizedCollectionMode(parameterizedCollectionMode);
 

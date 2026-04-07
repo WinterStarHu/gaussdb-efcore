@@ -1,0 +1,1 @@
+CREATE USER npgsql_tests SYSADMIN PASSWORD 'NpGsql@123';

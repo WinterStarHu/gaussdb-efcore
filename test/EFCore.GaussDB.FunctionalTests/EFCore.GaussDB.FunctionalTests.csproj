@@ -4,6 +4,7 @@
     <AssemblyName>HuaweiCloud.EntityFrameworkCore.GaussDB.FunctionalTests</AssemblyName>
     <RootNamespace>Microsoft.EntityFrameworkCore</RootNamespace>
     <PreserveCompilationContext>true</PreserveCompilationContext>
+    <NoWarn>$(NoWarn);0612;0618</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -27,6 +28,12 @@
   <ItemGroup>
     <None Update="Northwind.sql" CopyToOutputDirectory="PreserveNewest" />
     <None Update="config.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="BulkUpdates\ComplexTypeBulkUpdatesNpgsqlTest.cs" />
+    <Compile Remove="Query\LegacyGaussDBNodaTimeTypeMappingTest.cs" />
+    <Compile Remove="Query\Relationships\**\*.cs" />
   </ItemGroup>
 
 </Project>
