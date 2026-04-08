@@ -5,7 +5,7 @@ namespace Microsoft.EntityFrameworkCore.Query;
 public class NonSharedPrimitiveCollectionsQueryGaussDBTest(NonSharedFixture fixture)
     : NonSharedPrimitiveCollectionsQueryRelationalTestBase(fixture)
 {
-    protected override DbContextOptionsBuilder SetParameterizedCollectionMode(DbContextOptionsBuilder optionsBuilder, ParameterizedCollectionMode parameterizedCollectionMode)
+    protected override DbContextOptionsBuilder SetParameterizedCollectionMode(DbContextOptionsBuilder optionsBuilder, ParameterTranslationMode parameterizedCollectionMode)
     {
         new GaussDBDbContextOptionsBuilder(optionsBuilder).UseParameterizedCollectionMode(parameterizedCollectionMode);
 
