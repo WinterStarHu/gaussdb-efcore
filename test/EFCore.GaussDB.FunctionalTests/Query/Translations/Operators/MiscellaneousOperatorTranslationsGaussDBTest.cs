@@ -1,4 +1,4 @@
-namespace Microsoft.EntityFrameworkCore.Query.Translations.Operators;
+﻿namespace Microsoft.EntityFrameworkCore.Query.Translations.Operators;
 
 public class MiscellaneousOperatorTranslationsGaussDBTest : MiscellaneousOperatorTranslationsTestBase<BasicTypesQueryGaussDBFixture>
 {
@@ -9,9 +9,9 @@ public class MiscellaneousOperatorTranslationsGaussDBTest : MiscellaneousOperato
         Fixture.TestSqlLoggerFactory.SetTestOutputHelper(testOutputHelper);
     }
 
-    public override async Task Conditional(bool async)
+    public override async Task Conditional()
     {
-        await base.Conditional(async);
+        await base.Conditional();
 
         AssertSql(
             """
@@ -24,9 +24,9 @@ END = 'Seattle'
 """);
     }
 
-    public override async Task Coalesce(bool async)
+    public override async Task Coalesce()
     {
-        await base.Coalesce(async);
+        await base.Coalesce();
 
         AssertSql(
             """
@@ -43,3 +43,4 @@ WHERE COALESCE(n."String", 'Unknown') = 'Seattle'
     private void AssertSql(params string[] expected)
         => Fixture.TestSqlLoggerFactory.AssertBaseline(expected);
 }
+

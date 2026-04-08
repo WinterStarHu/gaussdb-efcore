@@ -3,6 +3,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Net;
 using System.Net.NetworkInformation;
 
+#pragma warning disable CS0618, CS0612 // GaussDBCidr and related legacy network APIs are still covered by this compatibility test file
+
 // ReSharper disable ConvertToConstant.Local
 
 namespace Microsoft.EntityFrameworkCore.Query.Translations;
@@ -1572,3 +1574,5 @@ FROM "NetTestEntities" AS n
 
     #endregion
 }
+
+#pragma warning restore CS0618, CS0612
