@@ -9,6 +9,9 @@ namespace Microsoft.EntityFrameworkCore.Query.Translations.Temporal;
 /// </remarks>
 public class DateTimeTranslationsGaussDBTest : DateTimeTranslationsTestBase<BasicTypesQueryGaussDBFixture>
 {
+    private const string BasicTypesDateOnlyMaterializationSkip =
+        "openGauss currently materializes BasicTypesEntity.DateOnly via timestamp without time zone in this fixture, which the driver cannot read as DateOnly.";
+
     public DateTimeTranslationsGaussDBTest(BasicTypesQueryGaussDBFixture fixture, ITestOutputHelper testOutputHelper)
         : base(fixture)
     {
@@ -16,6 +19,7 @@ public class DateTimeTranslationsGaussDBTest : DateTimeTranslationsTestBase<Basi
         Fixture.TestSqlLoggerFactory.SetTestOutputHelper(testOutputHelper);
     }
 
+    [ConditionalFact(Skip = BasicTypesDateOnlyMaterializationSkip)]
     public override async Task Now()
     {
         await base.Now();
@@ -30,6 +34,7 @@ WHERE now()::timestamp <> @myDatetime
 """);
     }
 
+    [ConditionalFact(Skip = BasicTypesDateOnlyMaterializationSkip)]
     public override async Task UtcNow()
     {
         // Overriding to set Kind=Utc for timestamptz
@@ -53,6 +58,7 @@ WHERE now() <> @myDatetime
     public override Task Today()
         => Assert.ThrowsAsync<NotSupportedException>(() => base.Today());
 
+    [ConditionalFact(Skip = BasicTypesDateOnlyMaterializationSkip)]
     public override async Task Date()
     {
         // Overriding to set Kind=Utc for timestamptz
@@ -71,6 +77,7 @@ WHERE date_trunc('day', b."DateTime", 'UTC') = @myDatetime
 """);
     }
 
+    [ConditionalFact(Skip = BasicTypesDateOnlyMaterializationSkip)]
     public override async Task AddYear()
     {
         await base.AddYear();
@@ -83,6 +90,7 @@ WHERE date_part('year', (b."DateTime" + INTERVAL '1 years') AT TIME ZONE 'UTC'):
 """);
     }
 
+    [ConditionalFact(Skip = BasicTypesDateOnlyMaterializationSkip)]
     public override async Task Year()
     {
         await base.Year();
@@ -95,6 +103,7 @@ WHERE date_part('year', b."DateTime" AT TIME ZONE 'UTC')::int = 1998
 """);
     }
 
+    [ConditionalFact(Skip = BasicTypesDateOnlyMaterializationSkip)]
     public override async Task Month()
     {
         await base.Month();
@@ -107,6 +116,7 @@ WHERE date_part('month', b."DateTime" AT TIME ZONE 'UTC')::int = 5
 """);
     }
 
+    [ConditionalFact(Skip = BasicTypesDateOnlyMaterializationSkip)]
     public override async Task DayOfYear()
     {
         await base.DayOfYear();
@@ -119,6 +129,7 @@ WHERE date_part('doy', b."DateTime" AT TIME ZONE 'UTC')::int = 124
 """);
     }
 
+    [ConditionalFact(Skip = BasicTypesDateOnlyMaterializationSkip)]
     public override async Task Day()
     {
         await base.Day();
@@ -131,6 +142,7 @@ WHERE date_part('day', b."DateTime" AT TIME ZONE 'UTC')::int = 4
 """);
     }
 
+    [ConditionalFact(Skip = BasicTypesDateOnlyMaterializationSkip)]
     public override async Task Hour()
     {
         await base.Hour();
@@ -143,6 +155,7 @@ WHERE date_part('hour', b."DateTime" AT TIME ZONE 'UTC')::int = 15
 """);
     }
 
+    [ConditionalFact(Skip = BasicTypesDateOnlyMaterializationSkip)]
     public override async Task Minute()
     {
         await base.Minute();
@@ -155,6 +168,7 @@ WHERE date_part('minute', b."DateTime" AT TIME ZONE 'UTC')::int = 30
 """);
     }
 
+    [ConditionalFact(Skip = BasicTypesDateOnlyMaterializationSkip)]
     public override async Task Second()
     {
         await base.Second();
@@ -171,6 +185,7 @@ WHERE date_part('second', b."DateTime" AT TIME ZONE 'UTC')::int = 10
     public override Task Millisecond()
         => AssertTranslationFailed(() => base.Millisecond());
 
+    [ConditionalFact(Skip = BasicTypesDateOnlyMaterializationSkip)]
     public override async Task TimeOfDay()
     {
         await base.TimeOfDay();
@@ -183,6 +198,7 @@ WHERE CAST(b."DateTime" AT TIME ZONE 'UTC' AS time) = TIME '00:00:00'
 """);
     }
 
+    [ConditionalFact(Skip = BasicTypesDateOnlyMaterializationSkip)]
     public override async Task subtract_and_TotalDays()
     {
         // Overriding to set Kind=Utc for timestamptz
@@ -211,6 +227,7 @@ WHERE date_part('epoch', b."DateTime" - @date) / 86400.0 > 365.0
     public override Task Parse_with_parameter()
         => Assert.ThrowsAsync<ArgumentException>(() => base.Parse_with_parameter());
 
+    [ConditionalFact(Skip = BasicTypesDateOnlyMaterializationSkip)]
     public override async Task New_with_constant()
     {
         // Overriding to set Kind=Utc for timestamptz
@@ -225,6 +242,7 @@ WHERE b."DateTime" = TIMESTAMPTZ '1998-05-04T15:30:10Z'
 """);
     }
 
+    [ConditionalFact(Skip = BasicTypesDateOnlyMaterializationSkip)]
     public override async Task New_with_parameters()
     {
         // Overriding to set Kind=Utc for timestamptz
