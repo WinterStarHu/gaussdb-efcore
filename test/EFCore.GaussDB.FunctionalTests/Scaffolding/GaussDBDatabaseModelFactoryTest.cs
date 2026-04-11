@@ -13,6 +13,21 @@ namespace Microsoft.EntityFrameworkCore.Scaffolding;
 
 public class GaussDBDatabaseModelFactoryTest : IClassFixture<GaussDBDatabaseModelFactoryTest.GaussDBDatabaseModelFixture>
 {
+    private const string MissingExtensionControlFileSkip =
+        "openGauss test environment does not provide the pgcrypto extension control file, so extension scaffolding cannot run here.";
+
+    private const string UnsupportedRowStoreIndexMethodSkip =
+        "openGauss row-store in this test environment does not support the hash/gin/gist/brin index setup used by this scaffolding test.";
+
+    private const string UnsupportedDroppedColumnsSkip =
+        "openGauss in this test environment does not allow the dropped-columns DDL shape used by this scaffolding test.";
+
+    private const string UnsupportedDomainSkip =
+        "openGauss in this test environment does not support the DOMAIN DDL used by this scaffolding test.";
+
+    private const string UnsupportedLineTypeSkip =
+        "openGauss in this test environment does not support the line type used by this scaffolding test.";
+
     // ReSharper disable once MemberCanBePrivate.Global
     protected GaussDBDatabaseModelFixture Fixture { get; }
 
@@ -694,7 +709,7 @@ DROP TABLE "PrincipalTable";
 
     #region ColumnFacets
 
-    [Fact]
+    [ConditionalFact(Skip = UnsupportedDomainSkip)]
     public void Column_with_domain_assigns_underlying_store_type()
     {
         Fixture.TestStore.ExecuteNonQuery(
@@ -819,7 +834,7 @@ CREATE TABLE "LengthColumns" (
                 DROP TABLE "LengthColumns"
                 """);
 
-    [Fact]
+    [ConditionalFact(Skip = UnsupportedLineTypeSkip)]
     public void Store_types_without_any_facets()
         => Test(
             """
@@ -1028,7 +1043,7 @@ CREATE TABLE "NullableColumns" (
                 DROP TABLE "NullableColumns"
                 """);
 
-    [Fact]
+    [ConditionalFact(Skip = UnsupportedDomainSkip)]
     public void Column_nullability_is_set_with_domain()
         => Test(
             """
@@ -1755,7 +1770,7 @@ CREATE TABLE columns_with_collation (
             dbModel => Assert.Null(dbModel.Collation),
             @"");
 
-    [Fact]
+    [ConditionalFact(Skip = UnsupportedRowStoreIndexMethodSkip)]
     public void Index_method()
         => Test(
             """
@@ -1834,7 +1849,7 @@ CREATE INDEX ix_without ON "IndexCollation" (a, b);
                 DROP TABLE "IndexCollation"
                 """);
 
-    [Theory]
+    [ConditionalTheory(Skip = UnsupportedRowStoreIndexMethodSkip)]
     [InlineData("gin", new bool[0])]
     [InlineData("gist", new bool[0])]
     [InlineData("hash", new bool[0])]
@@ -1993,7 +2008,7 @@ DROP SEQUENCE "IntSequence";
 DROP SEQUENCE "BigIntSequence";
 """);
 
-    [Fact]
+    [ConditionalFact(Skip = UnsupportedDroppedColumnsSkip)]
     public void Dropped_columns()
         => Test(
             """
@@ -2009,12 +2024,18 @@ ALTER TABLE foo ADD COLUMN id2 int PRIMARY KEY;
             },
             "DROP TABLE foo");
 
-    [Fact]
+    [ConditionalFact(Skip = MissingExtensionControlFileSkip)]
     public void Postgres_extensions()
         => Test(
             """
 DROP EXTENSION IF EXISTS postgis;
-CREATE EXTENSION hstore;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'hstore') THEN
+        EXECUTE 'CREATE EXTENSION hstore';
+    END IF;
+END
+$$;
 CREATE EXTENSION pgcrypto SCHEMA db2;
 """,
             [],
@@ -2035,7 +2056,7 @@ CREATE EXTENSION pgcrypto SCHEMA db2;
                         Assert.Equal("db2", e.Schema);
                     });
             },
-            "DROP EXTENSION hstore; DROP EXTENSION pgcrypto");
+            "DROP EXTENSION IF EXISTS pgcrypto");
 
     [Fact]
     public void Enums()
@@ -2093,7 +2114,7 @@ DROP TABLE foo;
 DROP TYPE mood;
 """);
 
-    [Fact]
+    [ConditionalFact(Skip = UnsupportedLineTypeSkip)]
     public void Column_default_type_names_are_scaffolded()
         => Test(
             """
@@ -2217,9 +2238,27 @@ CREATE EXTENSION postgis;
         public override async Task InitializeAsync()
         {
             await base.InitializeAsync();
-            await TestStore.ExecuteNonQueryAsync("CREATE SCHEMA IF NOT EXISTS db2");
             await TestStore.ExecuteNonQueryAsync("""
-                CREATE SCHEMA IF NOT EXISTS "db.2"
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'db2') THEN
+                        EXECUTE 'CREATE SCHEMA db2';
+                    END IF;
+                EXCEPTION
+                    WHEN duplicate_schema THEN NULL;
+                END
+                $$;
+                """);
+            await TestStore.ExecuteNonQueryAsync("""
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'db.2') THEN
+                        EXECUTE 'CREATE SCHEMA "db.2"';
+                    END IF;
+                EXCEPTION
+                    WHEN duplicate_schema THEN NULL;
+                END
+                $$;
                 """);
         }
 

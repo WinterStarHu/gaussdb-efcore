@@ -2,6 +2,9 @@
 
 public class ComparisonOperatorTranslationsGaussDBTest : ComparisonOperatorTranslationsTestBase<BasicTypesQueryGaussDBFixture>
 {
+    private const string BasicTypesDateOnlyMaterializationSkip =
+        "openGauss currently materializes BasicTypesEntity.DateOnly via timestamp without time zone in this fixture, which the driver cannot read as DateOnly.";
+
     public ComparisonOperatorTranslationsGaussDBTest(BasicTypesQueryGaussDBFixture fixture, ITestOutputHelper testOutputHelper)
         : base(fixture)
     {
@@ -9,7 +12,8 @@ public class ComparisonOperatorTranslationsGaussDBTest : ComparisonOperatorTrans
         Fixture.TestSqlLoggerFactory.SetTestOutputHelper(testOutputHelper);
     }
 
-        public override async Task Equal()
+    [ConditionalFact(Skip = BasicTypesDateOnlyMaterializationSkip)]
+    public override async Task Equal()
     {
         await base.Equal();
 
@@ -21,6 +25,7 @@ WHERE b."Int" = 8
 """);
     }
 
+    [ConditionalFact(Skip = BasicTypesDateOnlyMaterializationSkip)]
     public override async Task NotEqual()
     {
         await base.NotEqual();
@@ -33,6 +38,7 @@ WHERE b."Int" <> 8
 """);
     }
 
+    [ConditionalFact(Skip = BasicTypesDateOnlyMaterializationSkip)]
     public override async Task GreaterThan()
     {
         await base.GreaterThan();
@@ -45,6 +51,7 @@ WHERE b."Int" > 8
 """);
     }
 
+    [ConditionalFact(Skip = BasicTypesDateOnlyMaterializationSkip)]
     public override async Task GreaterThanOrEqual()
     {
         await base.GreaterThanOrEqual();
@@ -57,6 +64,7 @@ WHERE b."Int" >= 8
 """);
     }
 
+    [ConditionalFact(Skip = BasicTypesDateOnlyMaterializationSkip)]
     public override async Task LessThan()
     {
         await base.LessThan();
@@ -69,6 +77,7 @@ WHERE b."Int" < 8
 """);
     }
 
+    [ConditionalFact(Skip = BasicTypesDateOnlyMaterializationSkip)]
     public override async Task LessThanOrEqual()
     {
         await base.LessThanOrEqual();

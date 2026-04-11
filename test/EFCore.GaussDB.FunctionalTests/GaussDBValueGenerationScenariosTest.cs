@@ -555,15 +555,14 @@ public class GaussDBValueGenerationScenariosTest
     {
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.HasPostgresExtension("uuid-ossp");
             modelBuilder
                 .Entity<GuidBlog>(
                     eb =>
                     {
                         eb.Property(e => e.Id)
-                            .HasDefaultValueSql("uuid_generate_v4()");
+                            .HasDefaultValueSql("uuid()::uuid");
                         eb.Property(e => e.NotId)
-                            .HasDefaultValueSql("uuid_generate_v4()");
+                            .HasDefaultValueSql("uuid()::uuid");
                     });
         }
     }

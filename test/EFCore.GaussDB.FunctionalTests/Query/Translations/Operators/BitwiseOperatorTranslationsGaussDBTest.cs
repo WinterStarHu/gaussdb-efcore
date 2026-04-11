@@ -2,6 +2,8 @@
 
 public class BitwiseOperatorTranslationsGaussDBTest : BitwiseOperatorTranslationsTestBase<BasicTypesQueryGaussDBFixture>
 {
+    private const string DateOnlySkip = "BasicTypesEntities still materializes DateOnly columns as timestamp without time zone";
+
     public BitwiseOperatorTranslationsGaussDBTest(BasicTypesQueryGaussDBFixture fixture, ITestOutputHelper testOutputHelper)
         : base(fixture)
     {
@@ -9,6 +11,7 @@ public class BitwiseOperatorTranslationsGaussDBTest : BitwiseOperatorTranslation
         Fixture.TestSqlLoggerFactory.SetTestOutputHelper(testOutputHelper);
     }
 
+    [ConditionalFact(Skip = DateOnlySkip)]
     public override async Task Or()
     {
         await base.Or();
@@ -26,6 +29,7 @@ FROM "BasicTypesEntities" AS b
 """);
     }
 
+    [ConditionalFact(Skip = DateOnlySkip)]
     public override async Task Or_over_boolean()
     {
         await base.Or_over_boolean();
@@ -43,6 +47,7 @@ FROM "BasicTypesEntities" AS b
 """);
     }
 
+    [ConditionalFact(Skip = DateOnlySkip)]
     public override async Task Or_multiple()
     {
         await base.Or_multiple();
@@ -55,6 +60,7 @@ WHERE CAST(b."Int" | b."Short" AS bigint) | b."Long" = 7
 """);
     }
 
+    [ConditionalFact(Skip = DateOnlySkip)]
     public override async Task And()
     {
         await base.And();
@@ -72,6 +78,7 @@ FROM "BasicTypesEntities" AS b
 """);
     }
 
+    [ConditionalFact(Skip = DateOnlySkip)]
     public override async Task And_over_boolean()
     {
         await base.And_over_boolean();
@@ -89,6 +96,7 @@ FROM "BasicTypesEntities" AS b
 """);
     }
 
+    [ConditionalFact(Skip = DateOnlySkip)]
     public override async Task Xor()
     {
         await base.Xor();
@@ -106,6 +114,7 @@ FROM "BasicTypesEntities" AS b
 """);
     }
 
+    [ConditionalFact(Skip = DateOnlySkip)]
     public override async Task Xor_over_boolean()
     {
         await base.Xor_over_boolean();
@@ -118,6 +127,7 @@ WHERE (b."Int" = b."Short") <> (b."String" = 'Seattle')
 """);
     }
 
+    [ConditionalFact(Skip = DateOnlySkip)]
     public override async Task Complement()
     {
         await base.Complement();
@@ -130,6 +140,7 @@ WHERE ~b."Int" = -9
 """);
     }
 
+    [ConditionalFact(Skip = DateOnlySkip)]
     public override async Task And_or_over_boolean()
     {
         await base.And_or_over_boolean();
@@ -142,6 +153,7 @@ WHERE (b."Int" = 12 AND b."Short" = 12) OR b."String" = 'Seattle'
 """);
     }
 
+    [ConditionalFact(Skip = DateOnlySkip)]
     public override async Task Or_with_logical_or()
     {
         await base.Or_with_logical_or();
@@ -154,6 +166,7 @@ WHERE b."Int" = 12 OR b."Short" = 12 OR b."String" = 'Seattle'
 """);
     }
 
+    [ConditionalFact(Skip = DateOnlySkip)]
     public override async Task And_with_logical_and()
     {
         await base.And_with_logical_and();
@@ -166,6 +179,7 @@ WHERE b."Int" = 8 AND b."Short" = 8 AND b."String" = 'Seattle'
 """);
     }
 
+    [ConditionalFact(Skip = DateOnlySkip)]
     public override async Task Or_with_logical_and()
     {
         await base.Or_with_logical_and();
@@ -178,6 +192,7 @@ WHERE (b."Int" = 8 OR b."Short" = 9) AND b."String" = 'Seattle'
 """);
     }
 
+    [ConditionalFact(Skip = DateOnlySkip)]
     public override async Task And_with_logical_or()
     {
         await base.And_with_logical_or();

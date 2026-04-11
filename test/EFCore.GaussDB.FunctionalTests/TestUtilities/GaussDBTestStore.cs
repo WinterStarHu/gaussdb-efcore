@@ -122,22 +122,58 @@ public class GaussDBTestStore : RelationalTestStore
 
         if (await DatabaseExistsAsync(Name))
         {
-            if (_scriptPath is not null)
+            if (_scriptPath is not null
+                && await ScriptDatabaseIsInitializedAsync())
             {
                 return false;
             }
 
-            await using var context = new DbContext(
-                AddProviderOptions(new DbContextOptionsBuilder().EnableServiceProviderCaching(false)).Options);
-            clean?.Invoke(context);
-            await CleanAsync(context);
-            return true;
+            await DropDatabaseAsync(master, Name);
+            GaussDBConnection.ClearAllPools();
         }
 
-        await ExecuteNonQueryAsync(master, GetCreateDatabaseStatement(Name));
+        try
+        {
+            await ExecuteNonQueryAsync(master, GetCreateDatabaseStatement(Name));
+        }
+        catch (PostgresException e) when (e.SqlState == "23505")
+        {
+            await WaitForExistsAsync((GaussDBConnection)Connection);
+            return false;
+        }
+
         await WaitForExistsAsync((GaussDBConnection)Connection);
 
         return true;
+    }
+
+    private async Task<bool> ScriptDatabaseIsInitializedAsync()
+    {
+        if (_scriptPath is null)
+        {
+            return true;
+        }
+
+        if (Name == Northwind)
+        {
+            return await ExecuteScalarAsync<long>(
+                    Connection,
+                    """
+SELECT COUNT(*)
+FROM pg_tables
+WHERE schemaname = 'public' AND tablename = 'Customers'
+""")
+                > 0;
+        }
+
+        return await ExecuteScalarAsync<long>(
+                Connection,
+                """
+SELECT COUNT(*)
+FROM pg_tables
+WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
+""")
+            > 0;
     }
 
     private static async Task WaitForExistsAsync(GaussDBConnection connection)
@@ -211,25 +247,50 @@ public class GaussDBTestStore : RelationalTestStore
 
         await using var master = new GaussDBConnection(CreateAdminConnectionString());
 
-        await ExecuteNonQueryAsync(master, GetDisconnectDatabaseSql(Name));
-        await ExecuteNonQueryAsync(master, GetDropDatabaseSql(Name));
+        await DropDatabaseAsync(master, Name);
 
         GaussDBConnection.ClearAllPools();
     }
 
-    // Kill all connection to the database
+    // openGauss exposes a provider-specific command for forcibly clearing sessions.
     private static string GetDisconnectDatabaseSql(string name)
         => $"""
-REVOKE CONNECT ON DATABASE "{name}" FROM PUBLIC;
-SELECT pg_terminate_backend (pg_stat_activity.pid)
-   FROM pg_stat_activity
-   WHERE datname = '{name}'
+            CLEAN CONNECTION TO ALL FORCE FOR DATABASE "{name}";
 """;
 
     private static string GetDropDatabaseSql(string name)
         => $"""
             DROP DATABASE "{name}"
             """;
+
+    private static async Task DropDatabaseAsync(DbConnection connection, string name)
+    {
+        for (var retryCount = 0; ; retryCount++)
+        {
+            try
+            {
+                await ExecuteNonQueryAsync(connection, GetDisconnectDatabaseSql(name));
+            }
+            catch (PostgresException e) when (e.SqlState == "3D000")
+            {
+                return;
+            }
+
+            try
+            {
+                await ExecuteNonQueryAsync(connection, GetDropDatabaseSql(name));
+                return;
+            }
+            catch (PostgresException e) when (e.SqlState == "3D000")
+            {
+                return;
+            }
+            catch (PostgresException e) when (e.SqlState == "55006" && retryCount < 30)
+            {
+                await Task.Delay(100);
+            }
+        }
+    }
 
     public override void OpenConnection()
         => Connection.Open();
@@ -421,11 +482,9 @@ SELECT pg_terminate_backend (pg_stat_activity.pid)
     public static string CreateConnectionString(string name, string? options = null)
     {
         var builder = new GaussDBConnectionStringBuilder(TestEnvironment.DefaultConnection) { Database = name };
-
-        if (options is not null)
-        {
-            builder.Options = options;
-        }
+        builder.Options = options is null
+            ? "-c enable_extension=on"
+            : $"-c enable_extension=on {options}";
 
         return builder.ConnectionString;
     }

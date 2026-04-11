@@ -746,7 +746,7 @@ public class GaussDBQueryableMethodTranslatingExpressionVisitor : RelationalQuer
         var jsonSet = _sqlExpressionFactory.Function(
             jsonColumn.TypeMapping?.StoreType switch
             {
-                "jsonb" => "jsonb_set",
+                "jsonb" => "json_set",
                 "json" => "json_set",
                 _ => throw new UnreachableException()
             },

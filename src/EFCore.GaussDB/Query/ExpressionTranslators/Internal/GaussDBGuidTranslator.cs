@@ -10,7 +10,8 @@ namespace HuaweiCloud.EntityFrameworkCore.GaussDB.Query.ExpressionTranslators.In
 /// </remarks>
 public class GaussDBGuidTranslator(ISqlExpressionFactory sqlExpressionFactory, Version? postgresVersion) : IMethodCallTranslator
 {
-    private readonly string _uuidGenerationFunction = postgresVersion.AtLeast(13) ? "gen_random_uuid" : "uuid_generate_v4";
+    // openGauss exposes uuid() without requiring extension control files; cast it explicitly to uuid.
+    private readonly string _uuidGenerationFunction = postgresVersion is not null ? "uuid" : "uuid";
 
     /// <summary>
     ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to

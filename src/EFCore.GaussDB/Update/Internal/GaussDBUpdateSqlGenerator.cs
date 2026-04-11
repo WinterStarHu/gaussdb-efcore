@@ -133,57 +133,12 @@ public class GaussDBUpdateSqlGenerator : UpdateSqlGenerator
                 columnModification.TypeMapping is GaussDBOwnedJsonTypeMapping,
                 "ColumnModification with JsonPath but non-GaussDBOwnedJsonTypeMapping");
 
-            if (columnModification.TypeMapping.StoreType is "json")
-            {
-                throw new NotSupportedException(
-                    "Cannot perform partial update because the GaussDB 'json' type has no json_set method. Use 'jsonb' instead.");
-            }
-
-            Check.DebugAssert(columnModification.TypeMapping.StoreType is "jsonb", "Non-jsonb type mapping in JSON partial update");
-
-            // TODO: Lax or not?
             stringBuilder
-                .Append("jsonb_set(")
+                .Append("json_set(")
                 .Append(updateSqlGeneratorHelper.DelimitIdentifier(columnModification.ColumnName))
-                .Append(", '{");
-
-            // TODO: Unfortunately JsonPath is provided as a JSONPATH string, but PG's jsonb_set requires the path as an array.
-            // Parse the components back out (https://github.com/dotnet/efcore/issues/32185)
-            var components = columnModification.JsonPath.Split(".");
-            var needsComma = false;
-            for (var i = 0; i < components.Length; i++)
-            {
-                if (needsComma)
-                {
-                    stringBuilder.Append(',');
-                }
-
-                var component = components[i];
-                var bracketOpen = component.IndexOf('[');
-                if (bracketOpen == -1)
-                {
-                    if (i > 0) // The first component is $, representing the root
-                    {
-                        stringBuilder.Append(component);
-                        needsComma = true;
-                    }
-
-                    continue;
-                }
-
-                var propertyName = component[..bracketOpen];
-                if (i > 0) // The first component is $, representing the root
-                {
-                    stringBuilder
-                        .Append(propertyName)
-                        .Append(',');
-                }
-
-                stringBuilder.Append(component[(bracketOpen + 1)..^1]);
-                needsComma = true;
-            }
-
-            stringBuilder.Append("}', ");
+                .Append(", '")
+                .Append(columnModification.JsonPath)
+                .Append("', ");
 
             // TODO: Hack around
             if (columnModification.Value is null)
@@ -195,7 +150,9 @@ public class GaussDBUpdateSqlGenerator : UpdateSqlGenerator
 
             base.AppendUpdateColumnValue(updateSqlGeneratorHelper, columnModification, stringBuilder, name, schema);
 
-            stringBuilder.Append(")");
+            stringBuilder
+                .Append(")::")
+                .Append(columnModification.TypeMapping.StoreType);
         }
         else
         {

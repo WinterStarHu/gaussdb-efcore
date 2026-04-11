@@ -17,6 +17,8 @@ public class GaussDBDatabaseCreator(
         IRelationalConnectionDiagnosticsLogger connectionLogger)
     : RelationalDatabaseCreator(dependencies)
 {
+    private const string InternalSchemas = "'pg_catalog', 'information_schema', 'sys', 'db4ai', 'dbe_perf', 'dbe_pldeveloper', 'dbe_profiler'";
+
     /// <summary>
     ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
     ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
@@ -130,13 +132,13 @@ public class GaussDBDatabaseCreator(
     private IRelationalCommand CreateHasTablesCommand()
         => rawSqlCommandBuilder
             .Build(
-                """
+                $$"""
 SELECT CASE WHEN COUNT(*) = 0 THEN FALSE ELSE TRUE END
 FROM pg_class AS cls
 JOIN pg_namespace AS ns ON ns.oid = cls.relnamespace
 WHERE
         cls.relkind IN ('r', 'v', 'm', 'f', 'p') AND
-        ns.nspname NOT IN ('pg_catalog', 'information_schema') AND
+        ns.nspname NOT IN ({{InternalSchemas}}) AND
         -- Exclude tables which are members of PG extensions
         NOT EXISTS (
             SELECT 1 FROM pg_depend WHERE
@@ -285,8 +287,21 @@ WHERE
 
         using (var masterConnection = connection.CreateAdminConnection())
         {
-            Dependencies.MigrationCommandExecutor
-                .ExecuteNonQuery(CreateDropCommands(), masterConnection);
+            var retryUntil = DateTime.UtcNow + RetryTimeout;
+
+            while (true)
+            {
+                try
+                {
+                    Dependencies.MigrationCommandExecutor
+                        .ExecuteNonQuery(CreateDropCommands(), masterConnection);
+                    break;
+                }
+                catch (PostgresException e) when (e.SqlState == "55006" && DateTime.UtcNow < retryUntil)
+                {
+                    Thread.Sleep(RetryDelay);
+                }
+            }
         }
     }
 
@@ -312,9 +327,22 @@ WHERE
         var masterConnection = connection.CreateAdminConnection();
         await using (masterConnection)
         {
-            await Dependencies.MigrationCommandExecutor
-                .ExecuteNonQueryAsync(CreateDropCommands(), masterConnection, cancellationToken)
-                .ConfigureAwait(false);
+            var retryUntil = DateTime.UtcNow + RetryTimeout;
+
+            while (true)
+            {
+                try
+                {
+                    await Dependencies.MigrationCommandExecutor
+                        .ExecuteNonQueryAsync(CreateDropCommands(), masterConnection, cancellationToken)
+                        .ConfigureAwait(false);
+                    break;
+                }
+                catch (PostgresException e) when (e.SqlState == "55006" && DateTime.UtcNow < retryUntil)
+                {
+                    await Task.Delay(RetryDelay, cancellationToken).ConfigureAwait(false);
+                }
+            }
         }
     }
 

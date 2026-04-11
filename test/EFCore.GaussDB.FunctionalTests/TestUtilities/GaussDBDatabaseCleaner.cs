@@ -25,10 +25,6 @@ public class GaussDBDatabaseCleaner : RelationalDatabaseCleaner
 
     public override void Clean(DatabaseFacade facade)
     {
-        // The following is somewhat hacky
-        // PostGIS creates some system tables (e.g. spatial_ref_sys) which can't be dropped until the extension
-        // is dropped. But our tests create some user tables which depend on PostGIS. So we clean out PostGIS
-        // and all tables that depend on it (CASCADE) before the database model is built.
         var creator = facade.GetService<IRelationalDatabaseCreator>();
         var connection = facade.GetService<IRelationalConnection>();
         if (creator.Exists())
@@ -37,7 +33,6 @@ public class GaussDBDatabaseCleaner : RelationalDatabaseCleaner
             try
             {
                 var conn = (GaussDBConnection)connection.DbConnection;
-                DropExtensions(conn);
                 DropTypes(conn);
                 DropFunctions(conn);
                 DropCollations(conn);
@@ -49,25 +44,6 @@ public class GaussDBDatabaseCleaner : RelationalDatabaseCleaner
         }
 
         base.Clean(facade);
-    }
-
-    private void DropExtensions(GaussDBConnection conn)
-    {
-        const string getExtensions = "SELECT name FROM pg_available_extensions WHERE installed_version IS NOT NULL AND name <> 'plpgsql'";
-
-        List<string> extensions;
-        using (var cmd = new GaussDBCommand(getExtensions, conn))
-        {
-            using var reader = cmd.ExecuteReader();
-            extensions = reader.Cast<DbDataRecord>().Select(r => r.GetString(0)).ToList();
-        }
-
-        if (extensions.Any())
-        {
-            var dropExtensionsSql = string.Join("", extensions.Select(e => $"DROP EXTENSION \"{e}\" CASCADE;"));
-            using var cmd = new GaussDBCommand(dropExtensionsSql, conn);
-            cmd.ExecuteNonQuery();
-        }
     }
 
     /// <summary>
@@ -103,7 +79,7 @@ WHERE typtype IN ('r', 'e') AND nspname <> 'pg_catalog'
     private void DropFunctions(GaussDBConnection conn)
     {
         const string getUserDefinedFunctions = """
-SELECT 'DROP ROUTINE "' || nspname || '"."' || proname || '"(' || oidvectortypes(proargtypes) || ');' FROM pg_proc
+SELECT 'DROP FUNCTION "' || nspname || '"."' || proname || '"(' || oidvectortypes(proargtypes) || ');' FROM pg_proc
 JOIN pg_namespace AS ns ON ns.oid = pg_proc.pronamespace
 WHERE
         nspname NOT IN ('pg_catalog', 'information_schema') AND
@@ -114,17 +90,24 @@ WHERE
                     deptype = 'e');
 """;
 
-        string dropSql;
+        string[] dropSql;
         using (var cmd = new GaussDBCommand(getUserDefinedFunctions, conn))
         {
             using var reader = cmd.ExecuteReader();
-            dropSql = string.Join("", reader.Cast<DbDataRecord>().Select(r => r.GetString(0)));
+            dropSql = reader.Cast<DbDataRecord>().Select(r => r.GetString(0)).ToArray();
         }
 
-        if (dropSql != "")
+        foreach (var sql in dropSql)
         {
-            using var cmd = new GaussDBCommand(dropSql, conn);
-            cmd.ExecuteNonQuery();
+            try
+            {
+                using var cmd = new GaussDBCommand(sql, conn);
+                cmd.ExecuteNonQuery();
+            }
+            catch (PostgresException e) when (e.SqlState is "42P13" or "42501" or "42883")
+            {
+                // openGauss may expose builtin or protected functions in user-visible schemas; ignore cleanup noise.
+            }
         }
     }
 
@@ -159,13 +142,8 @@ FROM pg_collation coll
     }
 
     protected override string BuildCustomSql(DatabaseModel databaseModel)
-        // Some extensions create tables (e.g. PostGIS), so we must drop them first.
-        => databaseModel.GetPostgresExtensions()
-            .Select(e => _sqlGenerationHelper.DelimitIdentifier(e.Name, e.Schema))
-            .Aggregate(
-                new StringBuilder(),
-                (builder, s) => builder.Append("DROP EXTENSION ").Append(s).Append(";"),
-                builder => builder.ToString());
+        // The test environment reuses shared extensions managed outside the tests; don't drop them during cleanup.
+        => "";
 
     protected override string BuildCustomEndingSql(DatabaseModel databaseModel)
         => databaseModel.GetPostgresEnums()
