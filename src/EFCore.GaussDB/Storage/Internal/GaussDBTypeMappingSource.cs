@@ -318,7 +318,6 @@ public class GaussDBTypeMappingSource : RelationalTypeMappingSource
             { typeof(string), _text },
             { typeof(JsonDocument), _jsonbDocument },
             { typeof(JsonElement), _jsonbElement },
-            { typeof(JsonTypePlaceholder), _jsonbOwned },
             { typeof(char), _singleChar },
             { typeof(DateTime), LegacyTimestampBehavior ? _timestamp : _timestamptz },
             { typeof(DateOnly), _dateDateOnly },

@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore.Diagnostics.Internal;
 using Microsoft.EntityFrameworkCore.Infrastructure.Internal;
 using Microsoft.EntityFrameworkCore.Storage.Internal;
+using Microsoft.EntityFrameworkCore.Storage.Json;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Microsoft.EntityFrameworkCore.Update.Internal;
 using HuaweiCloud.EntityFrameworkCore.GaussDB.Internal;
 using HuaweiCloud.EntityFrameworkCore.GaussDB.Storage.Internal;
@@ -15,19 +17,15 @@ public class GaussDBModificationCommandBatchTest
     [Fact]
     public void AddCommand_returns_false_when_max_batch_size_is_reached()
     {
-        var typeMapper = new GaussDBTypeMappingSource(
-            TestServiceFactory.Instance.Create<TypeMappingSourceDependencies>(),
-            TestServiceFactory.Instance.Create<RelationalTypeMappingSourceDependencies>(),
-            new GaussDBSqlGenerationHelper(new RelationalSqlGenerationHelperDependencies()),
-            new GaussDBSingletonOptions());
+        var typeMapper = CreateTypeMapper();
 
         var batch = new GaussDBModificationCommandBatch(
             new ModificationCommandBatchFactoryDependencies(
                 new RelationalCommandBuilderFactory(
-                    new RelationalCommandBuilderDependencies(
-                        typeMapper,
-                        new ExceptionDetector(),
-                        new LoggingOptions())),
+                    TestServiceFactory.Instance.Create<RelationalCommandBuilderDependencies>(
+                        (typeof(IRelationalTypeMappingSource), typeMapper),
+                        (typeof(ExceptionDetector), new ExceptionDetector()),
+                        (typeof(LoggingOptions), new LoggingOptions()))),
                 new GaussDBSqlGenerationHelper(
                     new RelationalSqlGenerationHelperDependencies()),
                 new GaussDBUpdateSqlGenerator(
@@ -49,6 +47,16 @@ public class GaussDBModificationCommandBatchTest
     }
 
     private class FakeDbContext : DbContext;
+
+    private static GaussDBTypeMappingSource CreateTypeMapper()
+        => new(
+            new TypeMappingSourceDependencies(
+                new ValueConverterSelector(new ValueConverterSelectorDependencies()),
+                new JsonValueReaderWriterSource(new JsonValueReaderWriterSourceDependencies()),
+                []),
+            new RelationalTypeMappingSourceDependencies([]),
+            new GaussDBSqlGenerationHelper(new RelationalSqlGenerationHelperDependencies()),
+            new GaussDBSingletonOptions());
 
     private static INonTrackedModificationCommand CreateModificationCommand(
         string name,

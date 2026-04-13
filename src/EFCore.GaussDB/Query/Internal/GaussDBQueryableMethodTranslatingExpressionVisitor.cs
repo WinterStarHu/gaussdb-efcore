@@ -255,14 +255,14 @@ public class GaussDBQueryableMethodTranslatingExpressionVisitor : RelationalQuer
         };
 
         var jsonTypeMapping = jsonQueryExpression.JsonColumn.TypeMapping!;
-        //Check.DebugAssert(jsonTypeMapping is GaussDBStructuralJsonTypeMapping, "JSON column has a non-JSON mapping");
+        Check.DebugAssert(jsonTypeMapping is GaussDBOwnedJsonTypeMapping, "JSON column has a non-JSON mapping");
 
         // We now add all of projected entity's the properties and navigations into the jsonb_to_recordset's AS clause, which defines the
         // names and types of columns to come out of the JSON fragments.
         var columnInfos = new List<GaussDBTableValuedFunctionExpression.ColumnInfo>();
 
         // We're only interested in properties which actually exist in the JSON, filter out uninteresting shadow keys
-        foreach (var property in jsonQueryExpression.StructuralType.GetPropertiesInHierarchy())
+        foreach (var property in GetAllPropertiesInHierarchy(jsonQueryExpression.EntityType))
         {
             if (property.GetJsonPropertyName() is string jsonPropertyName)
             {
@@ -275,37 +275,17 @@ public class GaussDBQueryableMethodTranslatingExpressionVisitor : RelationalQuer
             }
         }
 
-        switch (jsonQueryExpression.StructuralType)
+        foreach (var navigation in GetAllNavigationsInHierarchy(jsonQueryExpression.EntityType)
+                     .Where(
+                         n => n.ForeignKey.IsOwnership
+                             && n.TargetEntityType.IsMappedToJson()
+                             && n.ForeignKey.PrincipalToDependent == n))
         {
-            case IEntityType entityType:
-                foreach (var navigation in entityType.GetNavigationsInHierarchy()
-                    .Where(n => n.ForeignKey.IsOwnership
-                        && n.TargetEntityType.IsMappedToJson()
-                        && n.ForeignKey.PrincipalToDependent == n))
-                {
-                    var jsonNavigationName = navigation.TargetEntityType.GetJsonPropertyName();
-                    Check.DebugAssert(jsonNavigationName is not null, $"No JSON property name for navigation {navigation.Name}");
+            var jsonNavigationName = navigation.TargetEntityType.GetJsonPropertyName();
+            Check.DebugAssert(jsonNavigationName is not null, $"No JSON property name for navigation {navigation.Name}");
 
-                    columnInfos.Add(
-                        new GaussDBTableValuedFunctionExpression.ColumnInfo { Name = jsonNavigationName, TypeMapping = jsonTypeMapping });
-                }
-
-                break;
-
-            case IComplexType complexType:
-                foreach (var complexProperty in complexType.GetComplexProperties())
-                {
-                    var jsonPropertyName = complexProperty.ComplexType.GetJsonPropertyName();
-                    Check.DebugAssert(jsonPropertyName is not null, $"No JSON property name for complex property {complexProperty.Name}");
-
-                    columnInfos.Add(
-                        new GaussDBTableValuedFunctionExpression.ColumnInfo { Name = jsonPropertyName, TypeMapping = jsonTypeMapping });
-                }
-
-                break;
-
-            default:
-                throw new UnreachableException();
+            columnInfos.Add(
+                new GaussDBTableValuedFunctionExpression.ColumnInfo { Name = jsonNavigationName, TypeMapping = jsonTypeMapping });
         }
 
         // json_to_recordset requires the nested JSON document - it does not accept a path within a containing JSON document (like SQL
@@ -330,12 +310,20 @@ public class GaussDBQueryableMethodTranslatingExpressionVisitor : RelationalQuer
         return new ShapedQueryExpression(
             selectExpression,
             new RelationalStructuralTypeShaperExpression(
-                jsonQueryExpression.StructuralType,
+                jsonQueryExpression.EntityType,
                 new ProjectionBindingExpression(
                     selectExpression,
                     new ProjectionMember(),
                     typeof(ValueBuffer)),
                 false));
+
+        static IEnumerable<IProperty> GetAllPropertiesInHierarchy(IEntityType entityType)
+            => entityType.GetAllBaseTypes().Concat(entityType.GetDerivedTypesInclusive())
+                .SelectMany(t => t.GetDeclaredProperties());
+
+        static IEnumerable<INavigation> GetAllNavigationsInHierarchy(IEntityType entityType)
+            => entityType.GetAllBaseTypes().Concat(entityType.GetDerivedTypesInclusive())
+                .SelectMany(t => t.GetDeclaredNavigations());
     }
 
     /// <summary>
@@ -641,140 +629,6 @@ public class GaussDBQueryableMethodTranslatingExpressionVisitor : RelationalQuer
         return true;
     }
 
-#pragma warning disable EF9002 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-    /// <summary>
-    ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-    ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-    ///     any release. You should only use it directly in your code with extreme caution and knowing that
-    ///     doing so can result in application failures when updating to a new Entity Framework Core release.
-    /// </summary>
-    protected override bool TrySerializeScalarToJson(
-        JsonScalarExpression target,
-        SqlExpression value,
-        [NotNullWhen(true)] out SqlExpression? jsonValue)
-    {
-        var jsonTypeMapping = ((ColumnExpression)target.Json).TypeMapping!;
-
-        if (
-            // The base implementation doesn't handle serializing arbitrary SQL expressions to JSON, since that's
-            // database-specific. In PostgreSQL we simply do this by wrapping any expression in to_jsonb().
-            !base.TrySerializeScalarToJson(target, value, out jsonValue)
-            // In addition, for string, numeric and bool, the base implementation simply returns the value as-is, since most databases allow
-            // passing these native types directly to their JSON partial update function. In PostgreSQL, jsonb_set() always requires jsonb,
-            // so we wrap those expression with to_jsonb() as well.
-            || jsonValue.TypeMapping?.StoreType is not "jsonb" and not "json")
-        {
-            switch (value.TypeMapping!.StoreType)
-            {
-                case "jsonb" or "json":
-                    jsonValue = value;
-                    return true;
-
-                case "bytea":
-                    value = _sqlExpressionFactory.Function(
-                        "encode",
-                        [value, _sqlExpressionFactory.Constant("base64")],
-                        nullable: true,
-                        argumentsPropagateNullability: [true, true],
-                        typeof(string),
-                        _typeMappingSource.FindMapping(typeof(string))!
-                    );
-                    break;
-            }
-
-            // We now have a scalar value expression that needs to be passed to jsonb_set(), but jsonb_set() requires a json/jsonb
-            // argument, not e.g. text or int. So we need to wrap the argument in to_jsonb/to_json.
-            // Note that for structural types we always already get a jsonb/json value and have already exited above (no need for
-            // to_jsonb/to_json).
-
-            // One exception is if the value expression happens to be a JsonScalarExpression (e.g. copy scalar property from within
-            // one JSON document into another). For that case, rather than do to_jsonb(x.JsonbDoc ->> 'SomeProperty') - which extracts
-            // a jsonb property as text only to reconvert it back to jsonb - we just change the type mapping on the JsonScalarExpression
-            // to json/jsonb, in order to generate x.JsonbDoc -> 'SomeProperty' (no text extraction).
-            if (value is JsonScalarExpression jsonScalarValue
-                && jsonScalarValue.Json.TypeMapping?.StoreType == jsonTypeMapping.StoreType)
-            {
-                jsonValue = new JsonScalarExpression(
-                    jsonScalarValue.Json,
-                    jsonScalarValue.Path,
-                    jsonScalarValue.Type,
-                    jsonTypeMapping,
-                    jsonScalarValue.IsNullable);
-                return true;
-            }
-
-            jsonValue = _sqlExpressionFactory.Function(
-                jsonTypeMapping.StoreType switch
-                {
-                    "jsonb" => "to_jsonb",
-                    "json" => "to_json",
-                    _ => throw new UnreachableException()
-                },
-                // Make sure GaussDB interprets constant values correctly by adding explicit typing based on the target property's type mapping.
-                // Note that we can only be here for scalar properties, for structural types we always already get a jsonb/json value
-                // and don't need to add to_jsonb/to_json.
-                [value is SqlConstantExpression ? _sqlExpressionFactory.Convert(value, target.Type, target.TypeMapping) : value],
-                nullable: true,
-                argumentsPropagateNullability: [true],
-                typeof(string),
-                jsonTypeMapping);
-        }
-
-        return true;
-    }
-#pragma warning restore EF9002 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-
-    /// <summary>
-    ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-    ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-    ///     any release. You should only use it directly in your code with extreme caution and knowing that
-    ///     doing so can result in application failures when updating to a new Entity Framework Core release.
-    /// </summary>
-    protected override SqlExpression? GenerateJsonPartialUpdateSetter(
-        Expression target,
-        SqlExpression value,
-        ref SqlExpression? existingSetterValue)
-    {
-        var (jsonColumn, path) = target switch
-        {
-            JsonScalarExpression j => ((ColumnExpression)j.Json, j.Path),
-            JsonQueryExpression j => (j.JsonColumn, j.Path),
-
-            _ => throw new UnreachableException(),
-        };
-
-        var jsonSet = _sqlExpressionFactory.Function(
-            jsonColumn.TypeMapping?.StoreType switch
-            {
-                "jsonb" => "jsonb_set",
-                "json" => "json_set",
-                _ => throw new UnreachableException()
-            },
-            arguments:
-            [
-                existingSetterValue ?? jsonColumn,
-                // Hack: Rendering of JSONPATH strings happens in value generation. We can have a special expression for modify to hold the
-                // IReadOnlyList<PathSegment> (just like Json{Scalar,Query}Expression), but instead we do the slight hack of packaging it
-                // as a constant argument; it will be unpacked and handled in SQL generation.
-                _sqlExpressionFactory.Constant(path, RelationalTypeMapping.NullMapping),
-                value
-            ],
-            nullable: true,
-            argumentsPropagateNullability: [true, true, true],
-            typeof(string),
-            jsonColumn.TypeMapping);
-
-        if (existingSetterValue is null)
-        {
-            return jsonSet;
-        }
-        else
-        {
-            existingSetterValue = jsonSet;
-            return null;
-        }
-    }
-
     #endregion ExecuteUpdate
 
     /// <summary>
@@ -783,18 +637,46 @@ public class GaussDBQueryableMethodTranslatingExpressionVisitor : RelationalQuer
     ///     any release. You should only use it directly in your code with extreme caution and knowing that
     ///     doing so can result in application failures when updating to a new Entity Framework Core release.
     /// </summary>
-    protected override bool IsValidSelectExpressionForExecuteDelete(SelectExpression selectExpression)
+    protected override bool IsValidSelectExpressionForExecuteDelete(
+        SelectExpression selectExpression,
+        StructuralTypeShaperExpression shaper,
+        [NotNullWhen(true)] out TableExpression? tableExpression)
+    {
         // The default relational behavior is to allow only single-table expressions, and the only permitted feature is a predicate.
         // Here we extend this to also inner joins to tables, which we generate via the PostgreSQL-specific USING construct.
-        => selectExpression is
+        if (selectExpression is
+            {
+                Orderings: [],
+                Offset: null,
+                Limit: null,
+                GroupBy: [],
+                Having: null
+            })
         {
-            Orderings: [],
-            Offset: null,
-            Limit: null,
-            GroupBy: [],
-            Having: null
+            TableExpressionBase? table = null;
+            if (selectExpression.Tables.Count == 1)
+            {
+                table = selectExpression.Tables[0];
+            }
+            else if (selectExpression.Tables.All(t => t is TableExpression or InnerJoinExpression))
+            {
+                var projectionBindingExpression = (ProjectionBindingExpression)shaper.ValueBufferExpression;
+                var entityProjectionExpression =
+                    (StructuralTypeProjectionExpression)selectExpression.GetProjection(projectionBindingExpression);
+                var column = entityProjectionExpression.BindProperty(shaper.StructuralType.GetProperties().First());
+                table = selectExpression.Tables.Select(t => t.UnwrapJoin()).Single(t => t.Alias == column.TableAlias);
+            }
+
+            if (table is TableExpression te)
+            {
+                tableExpression = te;
+                return true;
+            }
         }
-        && selectExpression.Tables[0] is TableExpression && selectExpression.Tables.Skip(1).All(t => t is InnerJoinExpression);
+
+        tableExpression = null;
+        return false;
+    }
 
     // PostgreSQL unnest is guaranteed to return output rows in the same order as its input array,
     // https://www.postgresql.org/docs/current/functions-array.html.

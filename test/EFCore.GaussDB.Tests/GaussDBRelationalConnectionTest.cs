@@ -3,6 +3,8 @@ using System.Transactions;
 using Microsoft.EntityFrameworkCore.Diagnostics.Internal;
 using Microsoft.EntityFrameworkCore.Infrastructure.Internal;
 using Microsoft.EntityFrameworkCore.Storage.Internal;
+using Microsoft.EntityFrameworkCore.Storage.Json;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using HuaweiCloud.EntityFrameworkCore.GaussDB.Diagnostics.Internal;
 using HuaweiCloud.EntityFrameworkCore.GaussDB.Infrastructure;
 using HuaweiCloud.EntityFrameworkCore.GaussDB.Internal;
@@ -376,39 +378,52 @@ public class GaussDBRelationalConnectionTest
         }
 
         var dbContextOptions = CreateOptions();
+        var transactionLogger = new DiagnosticsLogger<DbLoggerCategory.Database.Transaction>(
+            new LoggerFactory(),
+            new LoggingOptions(),
+            new DiagnosticListener("FakeDiagnosticListener"),
+            new GaussDBLoggingDefinitions(),
+            new NullDbContextLogger());
+        var connectionLogger = new RelationalConnectionDiagnosticsLogger(
+            new LoggerFactory(),
+            new LoggingOptions(),
+            new DiagnosticListener("FakeDiagnosticListener"),
+            new GaussDBLoggingDefinitions(),
+            new NullDbContextLogger(),
+            dbContextOptions);
+        var connectionStringResolver = new NamedConnectionStringResolver(options);
+        var relationalTransactionFactory = new RelationalTransactionFactory(
+            new RelationalTransactionFactoryDependencies(
+                new RelationalSqlGenerationHelper(
+                    new RelationalSqlGenerationHelperDependencies())));
+        var currentContext = new CurrentDbContext(new FakeDbContext());
+        var exceptionDetector = new ExceptionDetector();
+        var commandBuilderFactory = new RelationalCommandBuilderFactory(
+            TestServiceFactory.Instance.Create<RelationalCommandBuilderDependencies>(
+                (typeof(IRelationalTypeMappingSource), CreateTypeMapper()),
+                (typeof(ExceptionDetector), exceptionDetector),
+                (typeof(LoggingOptions), new LoggingOptions())));
+        var dependenciesTemplate = TestServiceFactory.Instance.Create<RelationalConnectionDependencies>(
+            (typeof(IDbContextOptions), dbContextOptions),
+            (typeof(IDiagnosticsLogger<DbLoggerCategory.Database.Transaction>), transactionLogger),
+            (typeof(IRelationalConnectionDiagnosticsLogger), connectionLogger),
+            (typeof(INamedConnectionStringResolver), connectionStringResolver),
+            (typeof(IRelationalTransactionFactory), relationalTransactionFactory),
+            (typeof(ICurrentDbContext), currentContext),
+            (typeof(IRelationalCommandBuilderFactory), commandBuilderFactory),
+            (typeof(IExceptionDetector), exceptionDetector));
 
         return new GaussDBRelationalConnection(
-            new RelationalConnectionDependencies(
-                options,
-                new DiagnosticsLogger<DbLoggerCategory.Database.Transaction>(
-                    new LoggerFactory(),
-                    new LoggingOptions(),
-                    new DiagnosticListener("FakeDiagnosticListener"),
-                    new GaussDBLoggingDefinitions(),
-                    new NullDbContextLogger()),
-                new RelationalConnectionDiagnosticsLogger(
-                    new LoggerFactory(),
-                    new LoggingOptions(),
-                    new DiagnosticListener("FakeDiagnosticListener"),
-                    new GaussDBLoggingDefinitions(),
-                    new NullDbContextLogger(),
-                    dbContextOptions),
-                new NamedConnectionStringResolver(options),
-                new RelationalTransactionFactory(
-                    new RelationalTransactionFactoryDependencies(
-                        new RelationalSqlGenerationHelper(
-                            new RelationalSqlGenerationHelperDependencies()))),
-                new CurrentDbContext(new FakeDbContext()),
-                new RelationalCommandBuilderFactory(
-                    new RelationalCommandBuilderDependencies(
-                        new GaussDBTypeMappingSource(
-                            TestServiceFactory.Instance.Create<TypeMappingSourceDependencies>(),
-                            TestServiceFactory.Instance.Create<RelationalTypeMappingSourceDependencies>(),
-                            new GaussDBSqlGenerationHelper(new RelationalSqlGenerationHelperDependencies()),
-                            new GaussDBSingletonOptions()),
-                        new ExceptionDetector(),
-                        new LoggingOptions())),
-                new ExceptionDetector()),
+            dependenciesTemplate with
+            {
+                ContextOptions = options,
+                TransactionLogger = transactionLogger,
+                ConnectionLogger = connectionLogger,
+                ConnectionStringResolver = connectionStringResolver,
+                RelationalTransactionFactory = relationalTransactionFactory,
+                CurrentContext = currentContext,
+                RelationalCommandBuilderFactory = commandBuilderFactory
+            },
             new GaussDBDataSourceManager([]),
             dbContextOptions);
     }
@@ -426,6 +441,16 @@ public class GaussDBRelationalConnectionTest
 
         return optionsBuilder.Options;
     }
+
+    private static GaussDBTypeMappingSource CreateTypeMapper()
+        => new(
+            new TypeMappingSourceDependencies(
+                new ValueConverterSelector(new ValueConverterSelectorDependencies()),
+                new JsonValueReaderWriterSource(new JsonValueReaderWriterSourceDependencies()),
+                []),
+            new RelationalTypeMappingSourceDependencies([]),
+            new GaussDBSqlGenerationHelper(new RelationalSqlGenerationHelperDependencies()),
+            new GaussDBSingletonOptions());
 
     private class FakeDbContext : DbContext
     {

@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace HuaweiCloud.EntityFrameworkCore.GaussDB.Query.Internal;
 
 /// <summary>
@@ -18,7 +20,7 @@ public class GaussDBQueryCompilationContext : RelationalQueryCompilationContext
         QueryCompilationContextDependencies dependencies,
         RelationalQueryCompilationContextDependencies relationalDependencies,
         bool async)
-        : this(dependencies, relationalDependencies, async, precompiling: false)
+        : base(dependencies, relationalDependencies, async)
     {
     }
 
@@ -32,8 +34,9 @@ public class GaussDBQueryCompilationContext : RelationalQueryCompilationContext
         QueryCompilationContextDependencies dependencies,
         RelationalQueryCompilationContextDependencies relationalDependencies,
         bool async,
-        bool precompiling)
-        : base(dependencies, relationalDependencies, async, precompiling)
+        bool precompiling,
+        IReadOnlySet<string> nonNullableReferenceTypeParameters)
+        : base(dependencies, relationalDependencies, async, precompiling, nonNullableReferenceTypeParameters)
     {
     }
 
