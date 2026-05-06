@@ -77,8 +77,8 @@ jobs:
         run: |
           dotnet test test/EFCore.GaussDB.Tests/EFCore.GaussDB.Tests.csproj -c Release --no-build --no-restore --logger "GitHubActions;report-warnings=false"
           # Main CI keeps only a small smoke set here so push/PR feedback stays fast.
-          # Full functional coverage should run separately on a slower scheduled/extended workflow.
-          dotnet test test/EFCore.GaussDB.FunctionalTests/EFCore.GaussDB.FunctionalTests.csproj -c Release --no-build --no-restore --filter "FullyQualifiedName~GaussDBDatabaseCreatorExistsTest|FullyQualifiedName~GaussDBDatabaseCreatorTest.Creates_physical_database_and_schema|FullyQualifiedName~GaussDBServiceCollectionExtensionsTest|FullyQualifiedName~GaussDBApiConsistencyTest|FullyQualifiedName~QueryFilterFuncletizationGaussDBTest" --logger "GitHubActions;report-warnings=false"
+          # Full functional coverage is left to local or dedicated extended runs.
+          dotnet test test/EFCore.GaussDB.FunctionalTests/EFCore.GaussDB.FunctionalTests.csproj -c Release --no-build --no-restore --filter "FullyQualifiedName~GaussDBDatabaseCreatorExistsTest|FullyQualifiedName~GaussDBDatabaseCreatorEnsureCreatedTest|FullyQualifiedName~GaussDBServiceCollectionExtensionsTest|FullyQualifiedName~GaussDBApiConsistencyTest|FullyQualifiedName~QueryFilterFuncletizationGaussDBTest" --logger "GitHubActions;report-warnings=false"
         shell: bash
 
       - id: analyze_tag
