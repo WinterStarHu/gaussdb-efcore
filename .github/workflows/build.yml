@@ -27,6 +27,7 @@ jobs:
     env:
       NPGSQL_TEST_POSTGIS: false
       Test__GaussDB__DefaultConnection: Server=localhost;Username=gaussdb;Password=Password@1234;SSL Mode=disable
+      Test__GaussDB__EnableExtensionConnectionOption: false
 
     services:
       opengauss:
