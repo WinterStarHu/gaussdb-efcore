@@ -26,6 +26,7 @@ jobs:
 
     env:
       NPGSQL_TEST_POSTGIS: false
+      Test__GaussDB__DefaultConnection: Server=localhost;Username=gaussdb;Password=Password@1234;SSL Mode=disable
 
     services:
       opengauss:
@@ -62,17 +63,9 @@ jobs:
             sleep 1
           done
           docker exec opengauss bash -lc 'export LD_LIBRARY_PATH=/usr/local/opengauss/lib:$LD_LIBRARY_PATH; /usr/local/opengauss/bin/gsql -h 127.0.0.1 -U gaussdb -d gaussdb_tests -W Password@1234 -c "SELECT 1"'
-          role_exists=$(docker exec opengauss bash -lc 'export LD_LIBRARY_PATH=/usr/local/opengauss/lib:$LD_LIBRARY_PATH; /usr/local/opengauss/bin/gsql -tA -h 127.0.0.1 -U gaussdb -d gaussdb_tests -W Password@1234 -c "SELECT 1 FROM pg_roles WHERE rolname = '\''npgsql_tests'\''"')
-          if ! echo "$role_exists" | grep -q 1; then
-            docker exec opengauss bash -lc 'export LD_LIBRARY_PATH=/usr/local/opengauss/lib:$LD_LIBRARY_PATH; /usr/local/opengauss/bin/gsql -h 127.0.0.1 -U gaussdb -d gaussdb_tests -W Password@1234 -c "CREATE USER npgsql_tests SYSADMIN PASSWORD '\''npgsql_tests'\'';"'
-          fi
           postgres_exists=$(docker exec opengauss bash -lc 'export LD_LIBRARY_PATH=/usr/local/opengauss/lib:$LD_LIBRARY_PATH; /usr/local/opengauss/bin/gsql -tA -h 127.0.0.1 -U gaussdb -d gaussdb_tests -W Password@1234 -c "SELECT 1 FROM pg_database WHERE datname = '\''postgres'\''"')
           if ! echo "$postgres_exists" | grep -q 1; then
-            docker exec opengauss bash -lc 'export LD_LIBRARY_PATH=/usr/local/opengauss/lib:$LD_LIBRARY_PATH; /usr/local/opengauss/bin/gsql -h 127.0.0.1 -U gaussdb -d gaussdb_tests -W Password@1234 -c "CREATE DATABASE postgres OWNER npgsql_tests;"'
-          fi
-          db_exists=$(docker exec opengauss bash -lc 'export LD_LIBRARY_PATH=/usr/local/opengauss/lib:$LD_LIBRARY_PATH; /usr/local/opengauss/bin/gsql -tA -h 127.0.0.1 -U gaussdb -d gaussdb_tests -W Password@1234 -c "SELECT 1 FROM pg_database WHERE datname = '\''npgsql_tests'\''"')
-          if ! echo "$db_exists" | grep -q 1; then
-            docker exec opengauss bash -lc 'export LD_LIBRARY_PATH=/usr/local/opengauss/lib:$LD_LIBRARY_PATH; /usr/local/opengauss/bin/gsql -h 127.0.0.1 -U gaussdb -d gaussdb_tests -W Password@1234 -c "CREATE DATABASE npgsql_tests OWNER npgsql_tests;"'
+            docker exec opengauss bash -lc 'export LD_LIBRARY_PATH=/usr/local/opengauss/lib:$LD_LIBRARY_PATH; /usr/local/opengauss/bin/gsql -h 127.0.0.1 -U gaussdb -d gaussdb_tests -W Password@1234 -c "CREATE DATABASE postgres OWNER gaussdb;"'
           fi
 
       - name: Build
