@@ -540,9 +540,16 @@ WHERE schemaname NOT IN ({InternalSchemas})
     public static string CreateConnectionString(string name, string? options = null)
     {
         var builder = new GaussDBConnectionStringBuilder(TestEnvironment.DefaultConnection) { Database = name };
-        builder.Options = options is null
-            ? "-c enable_extension=on"
-            : $"-c enable_extension=on {options}";
+        var effectiveOptions = TestEnvironment.EnableExtensionConnectionOption
+            ? options is null
+                ? "-c enable_extension=on"
+                : $"-c enable_extension=on {options}"
+            : options;
+
+        if (!string.IsNullOrWhiteSpace(effectiveOptions))
+        {
+            builder.Options = effectiveOptions;
+        }
 
         return builder.ConnectionString;
     }

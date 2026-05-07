@@ -31,6 +31,9 @@ public static class TestEnvironment
     public static string DefaultConnection
         => Config["DefaultConnection"] ?? DefaultConnectionString;
 
+    public static bool EnableExtensionConnectionOption
+        => !string.Equals(Config["EnableExtensionConnectionOption"], "false", StringComparison.OrdinalIgnoreCase);
+
     private static Version? _postgresVersion;
 
     public static Version PostgresVersion
